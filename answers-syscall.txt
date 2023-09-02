@@ -1,0 +1,5 @@
+1. /kernel/trap.c usertrap()
+2. 7 SYS_exec
+3. supervise
+4. mmap error
+5. mmap to 0

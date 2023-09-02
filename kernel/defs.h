@@ -60,6 +60,7 @@ void            ramdiskintr(void);
 void            ramdiskrw(struct buf*);
 
 // kalloc.c
+uint64          getfreemem(void);
 void*           kalloc(void);
 void            kfree(void *);
 void            kinit(void);
@@ -85,6 +86,7 @@ void            printfinit(void);
 int             cpuid(void);
 void            exit(int);
 int             fork(void);
+uint64          getprocnum(void);
 int             growproc(int);
 void            proc_mapstacks(pagetable_t);
 pagetable_t     proc_pagetable(struct proc *);
@@ -99,6 +101,8 @@ void            procinit(void);
 void            scheduler(void) __attribute__((noreturn));
 void            sched(void);
 void            sleep(void*, struct spinlock*);
+int             sysinfo(int p);
+void            trace(int mask);
 void            userinit(void);
 int             wait(uint64);
 void            wakeup(void*);

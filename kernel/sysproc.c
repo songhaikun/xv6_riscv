@@ -69,7 +69,23 @@ sys_sleep(void)
   release(&tickslock);
   return 0;
 }
-
+uint64 sys_sysinfo(void)
+{
+  uint64 p;
+  argaddr(0, &p);
+  return sysinfo(p);
+}
+uint64
+sys_trace(void)
+{
+  //
+  int n;
+  argint(0, &n); //get 0th num
+  if(n < 0)
+    n = 0;
+  trace(n);
+  return 0;
+}
 uint64
 sys_kill(void)
 {

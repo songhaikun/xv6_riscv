@@ -4,6 +4,7 @@
 #include "riscv.h"
 #include "spinlock.h"
 #include "proc.h"
+#include "sysinfo.h"
 #include "defs.h"
 
 struct cpu cpus[NCPU];
@@ -167,6 +168,7 @@ freeproc(struct proc *p)
   p->name[0] = 0;
   p->chan = 0;
   p->killed = 0;
+  p->tracemask = 0;
   p->xstate = 0;
   p->state = UNUSED;
 }
@@ -254,6 +256,20 @@ userinit(void)
   release(&p->lock);
 }
 
+uint64 getprocnum(void)
+{
+  struct proc *p;
+  uint64 pnum = 0;
+  for(p = proc; p != &proc[NPROC]; p++)
+  {
+    //acquire(&p->lock); // maybe not need
+    if(p->state != UNUSED)
+      pnum++;
+    //release(&p->lock);
+  }
+  return pnum;
+}
+
 // Grow or shrink user memory by n bytes.
 // Return 0 on success, -1 on failure.
 int
@@ -295,7 +311,7 @@ fork(void)
     return -1;
   }
   np->sz = p->sz;
-
+  np->tracemask = p->tracemask;
   // copy saved user registers.
   *(np->trapframe) = *(p->trapframe);
 
@@ -559,6 +575,43 @@ sleep(void *chan, struct spinlock *lk)
   // Reacquire original lock.
   release(&p->lock);
   acquire(lk);
+}
+
+// int
+// filestat(struct file *f, uint64 addr)
+// {
+//   struct proc *p = myproc();
+//   struct stat st;
+  
+//   if(f->type == FD_INODE || f->type == FD_DEVICE){
+//     ilock(f->ip);
+//     stati(f->ip, &st);
+//     iunlock(f->ip);
+//     if(copyout(p->pagetable, addr, (char *)&st, sizeof(st)) < 0)
+//       return -1;
+//     return 0;
+//   }
+//   return -1;
+// }
+
+int sysinfo(int addr)
+{
+  struct sysinfo sinfo;
+  struct proc *proc = myproc();
+  sinfo.freemem = getfreemem();
+  sinfo.nproc   = getprocnum();
+  if(addr != 0 && copyout(proc->pagetable, addr, (char *)&sinfo, sizeof(sinfo)) < 0)
+    return -1;
+  return 0;
+}
+
+void
+trace(int mask)
+{
+  struct proc *p = myproc();
+  acquire(&p->lock);
+  p->tracemask = mask;
+  release(&p->lock);
 }
 
 // Wake up all processes sleeping on chan.
