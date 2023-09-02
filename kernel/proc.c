@@ -133,13 +133,12 @@ found:
   }
 
 #ifdef LAB_PGTBL
-  struct usyscall *u = (struct usyscall *)USYSCALL;
-  if((u = (struct usyscall *)kalloc()) == 0){
+  if((p->usyscall = (struct usyscall *)kalloc()) == 0){
     freeproc(p);
     release(&p->lock);
     return 0;
   }
-  u->pid = p->pid;
+  p->usyscall->pid = p->pid;
 #endif
 
   // An empty user page table.
@@ -169,10 +168,9 @@ freeproc(struct proc *p)
     kfree((void*)p->trapframe);
   p->trapframe = 0;
 #ifdef LAB_PGTBL
-  struct usyscall *u = (struct usyscall *)USYSCALL;
-  if(u)
-    kfree((void*)u);
-  u->pid = 0;
+  if(p->usyscall)
+    kfree((void*)p->usyscall);
+  p->usyscall = 0;
 #endif
   if(p->pagetable)
     proc_freepagetable(p->pagetable, p->sz);
@@ -219,10 +217,8 @@ proc_pagetable(struct proc *p)
   }
 
 #ifdef LAB_PGTBL
-  // map usyscall page
-  struct usyscall *u = (struct usyscall *)USYSCALL;
   if(mappages(pagetable, USYSCALL, PGSIZE,
-              (uint64)(u), PTE_R | PTE_U) < 0){
+              (uint64)(p->usyscall), PTE_R | PTE_U) < 0){
     uvmunmap(pagetable, TRAMPOLINE, 1, 0);
     uvmunmap(pagetable, TRAPFRAME, 1, 0);
     uvmfree(pagetable, 0);
