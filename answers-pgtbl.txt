@@ -1,0 +1,2 @@
+1. sys_fork? father and child progress use same pa until child writesth
+2. ptes can't acess page1 because it's unvalid ptes

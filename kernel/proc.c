@@ -185,6 +185,31 @@ freeproc(struct proc *p)
   p->state = UNUSED;
 }
 
+// find page be accessed
+int pgaccess(char *sa, uint32 len, uint32 *addr)
+{
+  if((uint64)sa + len * PGSIZE > MAXVA || len > 32)
+    return -1;
+  struct proc *p = myproc();
+  char *sa_t = sa;
+  int i = 0;
+  uint32 bitmask = 0;
+  while(i < len)
+  {
+    pte_t *p_pte = walk(p->pagetable, (uint64)sa_t, 0);
+    if(*p_pte & PTE_V && (*p_pte & PTE_A))
+    {
+      bitmask |= (1 << i);
+      *p_pte &= (~PTE_A); //clear the set
+    }
+    sa_t += PGSIZE;
+    i++;
+  }
+  if(0 > copyout(p->pagetable, (uint64)addr, (char *)&bitmask, sizeof(bitmask)))
+    return -1;
+  return 0;
+}
+
 // Create a user page table for a given process, with no user memory,
 // but with trampoline and trapframe pages.
 pagetable_t
