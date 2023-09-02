@@ -345,6 +345,51 @@ uvmclear(pagetable_t pagetable, uint64 va)
   *pte &= ~PTE_U;
 }
 
+// void
+// freewalk(pagetable_t pagetable)
+// {
+//   // there are 2^9 = 512 PTEs in a page table.
+//   for(int i = 0; i < 512; i++){
+//     pte_t pte = pagetable[i];
+//     if((pte & PTE_V) && (pte & (PTE_R|PTE_W|PTE_X)) == 0){
+//       // this PTE points to a lower-level page table.
+//       uint64 child = PTE2PA(pte);
+//       freewalk((pagetable_t)child);
+//       pagetable[i] = 0;
+//     } else if(pte & PTE_V){
+//       panic("freewalk: leaf");
+//     }
+//   }
+//   kfree((void*)pagetable);
+// }
+
+void printline(pagetable_t pagetable, int depth)
+{
+  if(depth > 3)
+    return;
+  for(int i = 0; i < 512; i++)
+  {
+    pte_t pte = pagetable[i];
+    if(pte & PTE_V)
+    {
+     int temp = depth;
+      while(temp > 1)
+      {
+        printf(".. ");
+        temp--;
+      }
+      printf("..%d: pte %p pa %p\n", i, pte, PTE2PA(pte));
+      printline((pagetable_t)PTE2PA(pte), depth + 1);     
+    }
+  }
+}
+
+void vmprint(pagetable_t pagetable)
+{
+  printf("page table %p\n", pagetable);
+  printline(pagetable, 1);
+}
+
 // Copy from kernel to user.
 // Copy len bytes from src to virtual address dstva in a given page table.
 // Return 0 on success, -1 on error.
