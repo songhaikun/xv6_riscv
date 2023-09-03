@@ -78,8 +78,11 @@ usertrap(void)
 
   // give up the CPU if this is a timer interrupt.
   if(which_dev == 2)
+  {
     yield();
-
+  }
+  if(0 != p->handle_sigreturn)
+    p->trapframe->a0 = p->handle_sigreturn->a0;
   usertrapret();
 }
 

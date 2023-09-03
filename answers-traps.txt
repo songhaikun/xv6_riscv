@@ -1,0 +1,6 @@
+1. a0-a7, a1
+2. li a1,12
+3. 642
+4. 3e
+5. He110 World no need
+6. will get the address's number behind this str 

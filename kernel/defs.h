@@ -80,6 +80,7 @@ int             pipewrite(struct pipe*, uint64, int);
 void            printf(char*, ...);
 void            panic(char*) __attribute__((noreturn));
 void            printfinit(void);
+void            backtrace(void);
 
 // proc.c
 int             cpuid(void);
@@ -98,6 +99,8 @@ struct proc*    myproc();
 void            procinit(void);
 void            scheduler(void) __attribute__((noreturn));
 void            sched(void);
+int             sigalarm(int, uint64);
+void            sigreturn(void);
 void            sleep(void*, struct spinlock*);
 void            userinit(void);
 int             wait(uint64);

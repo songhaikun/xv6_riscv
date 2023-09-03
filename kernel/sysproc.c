@@ -49,6 +49,26 @@ sys_sbrk(void)
 }
 
 uint64
+sys_sigalarm(void)
+{
+  int cycle;
+  uint64 fn_addr;
+  argint(0, &cycle);
+  argaddr(1, &fn_addr);
+  if(cycle < 0)
+    cycle = 0;
+  sigalarm(cycle, fn_addr);
+  return 0;
+}
+
+uint64
+sys_sigreturn(void)
+{
+  sigreturn();
+  return 0;
+}
+
+uint64
 sys_sleep(void)
 {
   int n;
@@ -57,6 +77,9 @@ sys_sleep(void)
   argint(0, &n);
   if(n < 0)
     n = 0;
+
+  backtrace();
+
   acquire(&tickslock);
   ticks0 = ticks;
   while(ticks - ticks0 < n){

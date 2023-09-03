@@ -125,6 +125,11 @@ found:
   p->pid = allocpid();
   p->state = USED;
 
+  p->cycle = 0;
+  p->left_in_cycle = 0;
+  p->handle_alarm_func = 0;
+  p->handle_sigreturn = 0;
+
   // Allocate a trapframe page.
   if((p->trapframe = (struct trapframe *)kalloc()) == 0){
     freeproc(p);
@@ -157,6 +162,8 @@ freeproc(struct proc *p)
 {
   if(p->trapframe)
     kfree((void*)p->trapframe);
+  if(p->handle_sigreturn)
+    kfree((void*) p->handle_sigreturn);
   p->trapframe = 0;
   if(p->pagetable)
     proc_freepagetable(p->pagetable, p->sz);
@@ -504,6 +511,22 @@ yield(void)
 {
   struct proc *p = myproc();
   acquire(&p->lock);
+  if(p->cycle)
+  {
+    p->left_in_cycle--;
+    if(0 == p->left_in_cycle)
+    {
+      // p->left_in_cycle = p->cycle;
+      if(0 == p->handle_sigreturn && (p->handle_sigreturn = (struct trapframe *)kalloc()) == 0)
+      {
+        freeproc(p);
+        sched();
+        release(&p->lock);
+      }
+      memmove(p->handle_sigreturn, p->trapframe, sizeof(struct trapframe));
+      p->trapframe->epc = (uint64)p->handle_alarm_func;
+    }
+  }
   p->state = RUNNABLE;
   sched();
   release(&p->lock);
@@ -528,6 +551,31 @@ forkret(void)
   }
 
   usertrapret();
+}
+
+int sigalarm(int cycle,  uint64 handler)
+{
+  if(cycle < 0)
+    cycle = 0;
+
+  struct proc *p = myproc();
+  // if(0 != p->handle_sigreturn)
+  //   return 0;
+  if(cycle)
+  {
+    // sigalarm in sigalarm hook
+    p->cycle = cycle;
+    p->left_in_cycle = cycle;
+    p->handle_alarm_func = handler;
+  }
+  return 0;
+}
+
+void sigreturn()
+{
+  struct proc *p = myproc();
+  memmove(p->trapframe, p->handle_sigreturn, sizeof(struct trapframe));
+  p->left_in_cycle = p->cycle;
 }
 
 // Atomically release lock and sleep on chan.
