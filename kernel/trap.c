@@ -10,7 +10,7 @@ struct spinlock tickslock;
 uint ticks;
 
 extern char trampoline[], uservec[], userret[];
-
+extern char pgref[];
 // in kernelvec.S, calls kerneltrap().
 void kernelvec();
 
@@ -65,7 +65,56 @@ usertrap(void)
     intr_on();
 
     syscall();
-  } else if((which_dev = devintr()) != 0){
+  } else if(r_scause() == 15){
+    uint64 stval_t = r_stval();
+    char *mem = 0;
+    if(stval_t >= MAXVA || stval_t > p->sz){
+      printf("page fault: out of bound\n");
+      setkilled(p);
+      exit(-1);
+    }
+    if(0 == stval_t){
+      printf("map zero\n");
+      setkilled(p);
+      exit(-1);
+    }
+    pte_t* pte = walk(p->pagetable, PGROUNDDOWN(stval_t), 0);
+    if(0 == pte) {
+      printf("map zero\n");
+      setkilled(p);
+      exit(-1);
+    }
+    if(!(*pte & PTE_COW)){
+      printf("not in COW\n");
+      setkilled(p);
+      exit(-1);
+    }
+    if(0 == (mem = kalloc())){
+      printf("out of mem\n");
+      setkilled(p);
+      exit(-1);
+    }
+    uint64 pa = walkaddr(p->pagetable, PGROUNDDOWN(stval_t));
+    if(pa){
+      memmove(mem, (char*)pa, PGSIZE);
+      // uvmunmap(p->pagetable, PGROUNDDOWN(stval_t), 1, 0);
+      int perm = PTE_FLAGS(*pte);
+      *pte &= ~(PTE_V);
+      perm |= PTE_W;
+      perm &= ~PTE_COW;
+      if(mappages(p->pagetable, PGROUNDDOWN(stval_t), PGSIZE, (uint64)mem, perm) < 0){
+        printf("mappage fault\n");
+        setkilled(p);
+        exit(-1);
+      }
+      kfree((void*) pa);
+    }else{
+      printf("wrong va!\n");
+      setkilled(p);
+      exit(-1);
+    }
+
+  }else if((which_dev = devintr()) != 0){
     // ok
   } else {
     printf("usertrap(): unexpected scause %p pid=%d\n", r_scause(), p->pid);

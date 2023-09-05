@@ -8,7 +8,7 @@ struct spinlock;
 struct sleeplock;
 struct stat;
 struct superblock;
-
+extern char pgref[];
 // bio.c
 void            binit(void);
 struct buf*     bread(uint, uint);
@@ -156,6 +156,10 @@ void            uartputc_sync(int);
 int             uartgetc(void);
 
 // vm.c
+int             getrefindex(void*);
+int             getref(void*);
+void            addref(void*);
+void            subref(void*);
 void            kvminit(void);
 void            kvminithart(void);
 void            kvmmap(pagetable_t, uint64, uint64, uint64, int);
