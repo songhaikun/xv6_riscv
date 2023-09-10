@@ -302,6 +302,30 @@ create(char *path, short type, short major, short minor)
 }
 
 uint64
+sys_symlink(void)
+{
+  struct inode *ip;
+  int target_len, path_len;
+  char target[MAXPATH], path[MAXPATH];
+  if((target_len = argstr(0, target, MAXPATH)) < 0 ||
+      (path_len = argstr(1, path, MAXPATH)) < 0)
+    return -1;
+  begin_op();
+  ip = create(path, T_SYMLINK, 0, 0);
+  if(0 == ip){
+    end_op();
+    return -1;
+  }
+  if(target_len > MAXPATH)
+    target_len = MAXPATH;
+  memset(ip->path, 0, 192);
+  memmove(ip->path, target, target_len);
+  iunlockput(ip);
+  end_op();
+  return 0;
+}
+
+uint64
 sys_open(void)
 {
   char path[MAXPATH];
@@ -323,7 +347,20 @@ sys_open(void)
       return -1;
     }
   } else {
-    if((ip = namei(path)) == 0){
+    int thre = 10;
+    while(thre > 0){
+      ip = namei(path);
+      if(ip == 0){
+        end_op();
+        return -1;
+      }
+      if(ip->type != T_SYMLINK || omode == O_NOFOLLOW)
+        break;
+      strncpy(path, ip->path, 128);
+      thre--;
+    }
+    
+    if(0 == thre){
       end_op();
       return -1;
     }
