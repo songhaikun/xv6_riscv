@@ -81,6 +81,17 @@ struct trapframe {
 
 enum procstate { UNUSED, USED, SLEEPING, RUNNABLE, RUNNING, ZOMBIE };
 
+struct vm_area {
+  int used;           // 是否已被使用
+  uint64 addr;        // 起始地址
+  int len;            // 长度
+  int prot;           // 权限
+  int flags;          // 标志位
+  int vfd;            // 对应的文件描述符
+  struct file* vfile; // 对应文件
+  int offset;         // 文件偏移，本实验中一直为0
+};
+
 // Per-process state
 struct proc {
   struct spinlock lock;
@@ -94,7 +105,7 @@ struct proc {
 
   // wait_lock must be held when using this:
   struct proc *parent;         // Parent process
-
+  struct vm_area vma[NVMA];    // 虚拟内存区域
   // these are private to the process, so p->lock need not be held.
   uint64 kstack;               // Virtual address of kernel stack
   uint64 sz;                   // Size of process memory (bytes)
